@@ -10,5 +10,5 @@ fi
 # Start our Image Preprocessor
 #
 cd ${HOME}/ptImagePreprocessor
-python3.7 ./image_preprocessor.py > ${HOME}/logs/ip.log 2>&1 &
+python3 ./image_preprocessor.py > ${HOME}/logs/ip.log 2>&1 &
 cd ${HOME}

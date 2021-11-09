@@ -3,7 +3,7 @@ RUN DEBIAN_FRONTEND=noninteractive && TZ=America/Chicago && apt-get update -y &&
 RUN DEBIAN_FRONTEND=noninteractive && TZ=America/Chicago && curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && apt-get update && apt-get install -y nodejs fswebcam software-properties-common ssh-client iputils-ping
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update
-RUN apt-get install -y python3.7 python3-pip python3-dev libpython3-dev
+RUN apt-get install -y python3 python3-pip python3-dev libpython3-dev
 WORKDIR /usr/src/app
 COPY . /usr/src/app
 RUN rm -rf Dockerfile* .git README.md *.yaml
@@ -12,4 +12,4 @@ RUN chmod 755 ./*.sh pt*/*.sh
 RUN ./install-pt.sh
 RUN rm install-pt.sh build-image.sh
 RUN mkdir ./logs
-RUN python3.7 -m pip install -r ./requirements.txt
+RUN python3 -m pip install -r ./requirements.txt
