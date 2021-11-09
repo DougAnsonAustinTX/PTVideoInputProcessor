@@ -957,18 +957,18 @@ VideoInputProcessorPT.prototype.processMQTTCommand = async function(buffer) {
                 }
                 else {
                     // retaining images....
-                    mypt.log(LOGGING.INFO,"Retaining captured images in: " + json['root_dir'] + " with timestamp: " + timestamp);
+                    pt.log(LOGGING.INFO,"Retaining captured images in: " + json['root_dir'] + " with timestamp: " + timestamp);
                 }
 
                 // remove any processed tensor files
                 if (tensor_file !== undefined) {
-                    mypt.log(LOGGING.INFO,"Removing Input Tensor File: " + tensor_file);
+                    pt.log(LOGGING.INFO,"Removing Input Tensor File: " + tensor_file);
                     await fs.rmSync(tensor_file);
                 }
                 break;
             default:
                 // ignore unsupported/handled commands
-                mypt.log(LOGGING.DEBUG, "Command: " + json['command'] + " ignored (no processor) - OK.");
+                pt.log(LOGGING.DEBUG, "Command: " + json['command'] + " ignored (no processor) - OK.");
                 break;
         }
     }
