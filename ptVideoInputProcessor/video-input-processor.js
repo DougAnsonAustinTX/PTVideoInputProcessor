@@ -894,6 +894,7 @@ VideoInputProcessorPT.prototype.dispatchAndPredict = async function(mypt, json) 
             publish_data['retain'] = json['retain'];
             publish_data['root_dir'] = json['root_dir'];
             publish_data['base_dir'] = json['base_dir'];
+            publish_data['local_dir'] = LOCAL_DIR;
 
             // send the raw image data over MQTT to the preprocessor... 
             mypt.log(LOGGING.INFO,"Dispatching captured raw images over MQTT for preprocessing...");

@@ -20,9 +20,12 @@
 
 # General OS
 import sys
+import os
 import signal
 import json
 import argparse
+import base64
+import traceback
 
 # Logging
 import logging
@@ -37,13 +40,14 @@ import paho.mqtt.client as mqtt
 import numpy as np 
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.applications.resnet50 import preprocess_input
 
 # Service Name
 SERVICE_NAME = 'ImagePreprocessorService'
 
 # MQTT Topics
 RAW_INPUT_TOPIC         = "rawinput"
-PROCESSED_OUTPUT_TOPIC  = "processed"
+PROCESSED_OUTPUT_TOPIC  = "processed"       
 
 # Create logger
 logger = logging.getLogger(SERVICE_NAME)
@@ -64,7 +68,7 @@ class ImagePreprocessorService():
         self.client.on_subscribe = self.on_subscribe
         
     # OnSubscribe
-    def on_subscribe(self, obj, mid, granted_qos):
+    def on_subscribe(self, client, obj, mid, granted_qos):
         logger.info("Subscribed to: " + str(mid) + " " + str(granted_qos))
         
     # OnConnect
@@ -78,9 +82,6 @@ class ImagePreprocessorService():
         msg_json_str = msg.payload.decode("utf-8");
         msg_json = json.loads(msg_json_str)
         
-        # Debug
-        logger.info("Topic: " + msg.topic + " Payload: " + json.dumps(msg_json))
-        
         # Process the input command
         self.process_command(msg_json)
         
@@ -89,10 +90,70 @@ class ImagePreprocessorService():
         infot = self.client.publish(topic, msg_str)
         infot.wait_for_publish()
             
+    # Read in a batch of images
+    def read_image_batch(self, img_paths, img_height, img_width):
+        img_list = [load_img(img_path, target_size=(img_height, img_width)) for img_path in img_paths if os.path.isfile(img_path)]
+        array_list =  np.array([img_to_array(img) for img in img_list])
+        return {"img":img_list, "array":array_list}
+    
     # Keras50 preprocessing
-    def keras50_preprocess(self, json):
-        logger.info("Keras50 Preprocessing: " + json.dumps(json))
-        self.send_message(PROCESSED_OUTPUT_TOPIC,json['timestamp'])
+    def keras50_preprocess(self, json_obj):
+        # Debug
+        logger.info("Keras50 Input: " + json.dumps(json_obj))
+        
+        try:
+            # import the images
+            shape = json_obj['shape'];
+            files = json_obj['files'];
+            file_list = [];
+            for i in range(0, len(files)):
+                file_list.append(json_obj['root_dir'] + '/' + files[i])
+        
+            # LoadImages
+            loaded_images = self.read_image_batch(file_list,shape[2],shape[3])
+            
+            # Preprocess images for Keras50...
+            preprocessed_images_list = preprocess_input(loaded_images['array'])
+            
+            # Debug
+            logger.info("Keras50: Input shape: " + str(preprocessed_images_list.shape))
+            logger.info("Keras50: Input dtype: " + str(preprocessed_images_list.dtype))
+            logger.info("Keras50: Input data length number of images: " + str(len(preprocessed_images_list)))
+            
+            # Transpose to make the shape Neo-compatible for Keras50
+            preprocessed_images_list = tf.transpose(preprocessed_images_list,[0, 3, 1, 2])
+
+            # Neo-compatible input tensor shape now!
+            logger.info("Keras50: Neo transposed Input shape: " + str(preprocessed_images_list.shape))
+            logger.info("Keras50: Neo transposed Input dtype: " + str(preprocessed_images_list.dtype))
+            logger.info("Keras50: Neo transposed Input data length number of images: " + str(len(preprocessed_images_list)))
+            
+            # Write the input tensor out to local file...
+            input_data_filename = json_obj['local_dir'] + "/data/" + json_obj['timestamp'] + ".np"
+            input_data_json = {}
+            input_data_json ['b64_data'] = base64.b64encode(preprocessed_images_list.numpy().data.tobytes()).decode('ascii')
+            logger.info("Keras50: Saving input tensor to file: " + input_data_filename)
+            with open(input_data_filename, 'w') as f:
+                f.write(json.dumps(input_data_json))
+                f.close()
+            
+            # Build out the predict() command
+            cmd = {}
+            cmd['command'] = "predict"
+            cmd['input_file'] = input_data_filename
+            cmd['timestamp'] = json_obj['timestamp']
+            cmd['root_dir'] = json_obj['root_dir']
+            cmd['retain'] = json_obj['retain']
+            cmd['shape'] = preprocessed_images_list.shape
+            cmd['type'] = preprocessed_images_list.dtype
+            cmd['num_images'] = len(preprocessed_images_list)
+            
+            # Publish to MQTT
+            logger.info("Publishing for prediction(): " + json.dumps(cmd) + " Topic: " + PROCESSED_OUTPUT_TOPIC)
+            self.client.publish(PROCESSED_OUTPUT_TOPIC,json.dumps(cmd))
+        except Exception as e:
+            logger.error("Caught Exception in keras50_preprocess(): " + str(e))
+            logger.error(traceback.format_exc())     
         
     # Raw preprocessing
     def raw_preprocess(self, json):
