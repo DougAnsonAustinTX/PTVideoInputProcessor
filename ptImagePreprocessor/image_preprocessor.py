@@ -33,6 +33,8 @@ import json
 # ResNet50 helpers used specifically with our selected pre-trained model
 from tensorflow.keras.applications.resnet50 import preprocess_input
 
+loop = asyncio.get_event_loop()
+
 async def run_image_preprocessor():
     async with AsyncExitStack() as stack:
         # Keep track of the asyncio tasks that we create, so that
@@ -53,12 +55,12 @@ async def run_image_preprocessor():
             manager = client.filtered_messages(topic_filter)
             messages = await stack.enter_async_context(manager)
             template = f'topic:{topic_filter}, payload:{{}}'
-            task = asyncio.create_task(log_messages(messages, template))
+            task = loop.create_task(log_messages(messages, template))
             tasks.add(task)
 
         # Messages that doesn't match a filter will get logged here
         messages = await stack.enter_async_context(client.unfiltered_messages())
-        task = asyncio.create_task(log_messages(messages, "[unfiltered] {}"))
+        task = loop.create_task(log_messages(messages, "[unfiltered] {}"))
         tasks.add(task)
         
         # Subscribe to topic(s)
@@ -70,7 +72,7 @@ async def run_image_preprocessor():
         #topics = (
         #    "predict",
         #)
-        #task = asyncio.create_task(post_to_topics(client, topics))
+        #task = loop.create_task(post_to_topics(client, topics))
         #tasks.add(task)
 
         # Wait for everything to complete (or fail due to, e.g., network
@@ -115,5 +117,4 @@ async def main():
 
 
 futures = [main()]
-loop = asyncio.get_event_loop()
 loop.run_until_complete(asyncio.wait(futures))
