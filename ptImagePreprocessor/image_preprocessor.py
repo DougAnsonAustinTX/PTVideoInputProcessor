@@ -66,10 +66,15 @@ class ImagePreprocessorService():
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.on_subscribe = self.on_subscribe
+        self.client.on_publish = self.on_publish
+        
+    # OnPublish
+    def on_publish(self, client, obj, mid):
+        logger.info("Published: " + str(mid))
         
     # OnSubscribe
     def on_subscribe(self, client, obj, mid, granted_qos):
-        logger.info("Subscribed to: " + str(mid) + " " + str(granted_qos))
+        logger.info("Subscribed: " + str(mid) + " " + str(granted_qos))
         
     # OnConnect
     def on_connect(self, client, userdata, flags, rc):
@@ -116,23 +121,22 @@ class ImagePreprocessorService():
             preprocessed_images_list = preprocess_input(loaded_images['array'])
             
             # Debug
-            logger.info("Keras50: Input shape: " + str(preprocessed_images_list.shape))
-            logger.info("Keras50: Input dtype: " + str(preprocessed_images_list.dtype))
-            logger.info("Keras50: Input data length number of images: " + str(len(preprocessed_images_list)))
+            # logger.info("Keras50: Input shape: " + str(preprocessed_images_list.shape))
+            # logger.info("Keras50: Input dtype: " + str(preprocessed_images_list.dtype))
+            # logger.info("Keras50: Input data length number of images: " + str(len(preprocessed_images_list)))
             
             # Transpose to make the shape Neo-compatible for Keras50
             preprocessed_images_list = tf.transpose(preprocessed_images_list,[0, 3, 1, 2])
 
             # Neo-compatible input tensor shape now!
-            logger.info("Keras50: Neo transposed Input shape: " + str(preprocessed_images_list.shape))
-            logger.info("Keras50: Neo transposed Input dtype: " + str(preprocessed_images_list.dtype))
-            logger.info("Keras50: Neo transposed Input data length number of images: " + str(len(preprocessed_images_list)))
+            # logger.info("Keras50: Neo transposed Input shape: " + str(preprocessed_images_list.shape))
+            # logger.info("Keras50: Neo transposed Input dtype: " + str(preprocessed_images_list.dtype))
+            # logger.info("Keras50: Neo transposed Input data length number of images: " + str(len(preprocessed_images_list)))
             
             # Write the input tensor out to local file...
-            input_data_filename = json_obj['local_dir'] + "/data/" + json_obj['timestamp'] + ".np"
+            input_data_filename = json_obj['local_dir'] + "/data/" + str(json_obj['timestamp']) + ".np"
             input_data_json = {}
             input_data_json ['b64_data'] = base64.b64encode(preprocessed_images_list.numpy().data.tobytes()).decode('ascii')
-            logger.info("Keras50: Saving input tensor to file: " + input_data_filename)
             with open(input_data_filename, 'w') as f:
                 f.write(json.dumps(input_data_json))
                 f.close()
@@ -147,12 +151,11 @@ class ImagePreprocessorService():
             cmd['files'] = json_obj['files']
             cmd['root_dir'] = json_obj['root_dir']
             cmd['base_dir'] = json_obj['base_dir']
-            cmd['shape'] = preprocessed_images_list.shape
-            cmd['type'] = preprocessed_images_list.dtype
+            cmd['shape'] = json_obj['shape']
             cmd['num_images'] = len(preprocessed_images_list)
             
             # Publish to MQTT
-            logger.info("Publishing for prediction(): " + json.dumps(cmd) + " Topic: " + PROCESSED_OUTPUT_TOPIC)
+            logger.info("Publishing for prediction(): " + json.dumps(cmd) + " Topic: " + PROCESSED_OUTPUT_TOPIC + " TensorFile: " + input_data_filename)
             self.client.publish(PROCESSED_OUTPUT_TOPIC,json.dumps(cmd))
         except Exception as e:
             logger.error("Caught Exception in keras50_preprocess(): " + str(e))
