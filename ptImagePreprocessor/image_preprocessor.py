@@ -144,6 +144,9 @@ class ImagePreprocessorService():
             cmd['timestamp'] = json_obj['timestamp']
             cmd['root_dir'] = json_obj['root_dir']
             cmd['retain'] = json_obj['retain']
+            cmd['files'] = json_obj['files']
+            cmd['root_dir'] = json_obj['root_dir']
+            cmd['base_dir'] = json_obj['base_dir']
             cmd['shape'] = preprocessed_images_list.shape
             cmd['type'] = preprocessed_images_list.dtype
             cmd['num_images'] = len(preprocessed_images_list)
