@@ -946,6 +946,7 @@ VideoInputProcessorPT.prototype.processMQTTCommand = async function(buffer) {
                 const root_dir = json['root_dir']; 
                 const doRetain = json['retain'];
                 const base_dir = json['base_dir'];
+                const tensor_file = json['tensor_filename'];
 
                 // clean up files
                 if (doRetain == false) { 
@@ -953,13 +954,16 @@ VideoInputProcessorPT.prototype.processMQTTCommand = async function(buffer) {
                     pt.log(LOGGING.INFO,"Cleaning out captured raw images with timestamp: " + timestamp + " Root dir: " + root_dir);
                     await pt.cleanupFiles(root_dir);
                     pt.log(LOGGING.INFO,"Cleaned out captured raw images: " + root_dir + ". OK.");
-
-                    // XXXX purging preprocessed images/tensors
-
                 }
                 else {
                     // retaining images....
                     mypt.log(LOGGING.INFO,"Retaining captured images in: " + json['root_dir'] + " with timestamp: " + timestamp);
+                }
+
+                // remove any processed tensor files
+                if (tensor_file !== undefined) {
+                    mypt.log(LOGGING.INFO,"Removing Input Tensor File: " + tensor_file);
+                    await fs.rmSync(tensor_file);
                 }
                 break;
             default:

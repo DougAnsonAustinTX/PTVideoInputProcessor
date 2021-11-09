@@ -46,8 +46,8 @@ from tensorflow.keras.applications.resnet50 import preprocess_input
 SERVICE_NAME = 'ImagePreprocessorService'
 
 # MQTT Topics
-RAW_INPUT_TOPIC         = "rawinput"
-PROCESSED_OUTPUT_TOPIC  = "processed"       
+RAW_INPUT_TOPIC = "rawinput"
+COMMAND_TOPIC   = "command"       
 
 # Create logger
 logger = logging.getLogger(SERVICE_NAME)
@@ -155,8 +155,8 @@ class ImagePreprocessorService():
             cmd['num_images'] = len(preprocessed_images_list)
             
             # Publish to MQTT
-            logger.info("Publishing for prediction(): " + json.dumps(cmd) + " Topic: " + PROCESSED_OUTPUT_TOPIC + " TensorFile: " + input_data_filename)
-            self.client.publish(PROCESSED_OUTPUT_TOPIC,json.dumps(cmd))
+            logger.info("Publishing for prediction(): " + json.dumps(cmd) + " Topic: " + COMMAND_TOPIC + " TensorFile: " + input_data_filename)
+            self.client.publish(COMMAND_TOPIC,json.dumps(cmd))
         except Exception as e:
             logger.error("Caught Exception in keras50_preprocess(): " + str(e))
             logger.error(traceback.format_exc())     
