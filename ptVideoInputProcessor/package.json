@@ -1,0 +1,22 @@
+{
+    "name": "videoinputprocessor-PT",
+    "version": "0.1.0",
+    "description": "Video Input Processor PT",
+    "main": "",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Pelion Ltd.",
+    "license": "Apache-2.0",
+    "gypfile": true,
+    "dependencies": {
+        "bindings": "^1.5.0",
+        "json-rpc-ws": "^5.0.0",
+        "node-addon-api": "^3.0.2",
+        "repl.history": "^0.1.4",
+        "aws-sdk": "^2.889.0",
+        "dotenv":"^8.2.0",
+        "mqtt":"^4.2.8",
+        "node-webcam":"^0.8.0"
+    }
+}

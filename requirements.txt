@@ -1,0 +1,4 @@
+asyncio >= 3.4.3
+asyncio-mqtt >= 0.10.0
+contextlib2 >=21.6.0
+tensorflow >= 2.1.0

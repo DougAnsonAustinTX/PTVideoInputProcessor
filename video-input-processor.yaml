@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: video-input-processor-pod
+spec:
+  automountServiceAccountToken: false
+  restartPolicy: OnFailure
+  hostname: pelion-edge-xavier
+  nodeName: MVS_PELION_GW_DEVICE_ID
+  hostNetwork: true
+  containers:
+  - name: video-input-processor-pod
+    image: "danson/videoinputprocessorimage-SAPT_UNAME_M_GOES_HERE:latest"
+    env:
+    - name: SAPT_AWS_REGION
+      value: "YOUR_AWS_REGION_GOES_HERE"
+    - name: SAPT_AWS_ACCESS_KEY_ID
+      value: "YOUR_AWS_ACCESS_KEY_GOES_HERE"
+    - name: SAPT_AWS_SECRET_ACCESS_KEY
+      value: "YOUR_AWS_SECRET_ACCESS_KEY_GOES_HERE"
+    - name: SAPT_AWS_S3_BUCKET
+      value: "YOUR_AWS_SAGEMAKER_S3_BUCKET_GOES_HERE"
+    - name: SAPT_AWS_S3_VIDEO_CAPTURE_DIR
+      value: "YOUR_S3_DIR_WHERE_VIDEO_CAPTURE_IS_SAVED"
+    - name: DEPLOYMENT_NAME
+      value: "video-input-processor-pod"
+    - name: SAPT_LOG_LEVEL
+      value: "INFO,ERROR"
+    - name: SAPT_PT_DEVICE_NAME
+      value: "video-input-processor"
+    command: ["/usr/src/app/run-service.sh"]
+    securityContext:
+      capabilities:
+        add: ["NET_ADMIN", "SYS_ADMIN"]
+      privileged: true
+    volumeMounts:
+      - mountPath: /tmp/edge.sock
+        name: edge
+      - mountPath: /dev/video0
+        name: video0
+      - mountPath: /models
+        name: models
+  volumes:
+    - name: edge
+      hostPath:
+        path: /tmp/edge.sock
+    - name: video0
+      hostPath:
+        path: /dev/video0
+    - name: models
+      hostPath:
+        path: /models
+
+      
