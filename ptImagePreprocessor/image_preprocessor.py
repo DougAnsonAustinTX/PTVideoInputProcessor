@@ -104,7 +104,7 @@ class ImagePreprocessorService():
     # Keras50 preprocessing
     def keras50_preprocess(self, json_obj):
         # Debug
-        logger.info("Keras50 Input: " + json.dumps(json_obj))
+        # logger.info("Keras50 Input: " + json.dumps(json_obj))
         
         try:
             # import the images
@@ -144,9 +144,10 @@ class ImagePreprocessorService():
             # Build out the predict() command
             cmd = {}
             cmd['command'] = "predict"
-            cmd['input_file'] = input_data_filename
+            cmd['tensor_filename'] = input_data_filename
             cmd['timestamp'] = json_obj['timestamp']
             cmd['root_dir'] = json_obj['root_dir']
+            cmd['model'] = json_obj['model'];
             cmd['retain'] = json_obj['retain']
             cmd['files'] = json_obj['files']
             cmd['root_dir'] = json_obj['root_dir']
