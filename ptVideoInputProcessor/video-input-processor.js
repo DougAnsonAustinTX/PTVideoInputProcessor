@@ -1006,7 +1006,7 @@ VideoInputProcessorPT.prototype.connectToMQTTBroker = async function(mypt) {
             client.on('message', async function (topic, buffer) {
                 if (topic !== undefined && topic == MQTT_COMMAND_TOPIC) {
                     // process received command
-                    await mypt.processMQTTCommand(buffer);
+                    mypt.processMQTTCommand(buffer);
                 }
             });
         }
