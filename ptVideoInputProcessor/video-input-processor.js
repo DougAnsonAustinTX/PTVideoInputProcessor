@@ -1008,7 +1008,6 @@ VideoInputProcessorPT.prototype.connectToMQTTBroker = async function(mypt) {
                     // process received command
                     await mypt.processMQTTCommand(buffer);
                 }
-                client.end();
             });
         }
         catch(ex) {
