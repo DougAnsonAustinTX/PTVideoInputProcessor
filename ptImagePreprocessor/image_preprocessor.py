@@ -169,7 +169,7 @@ class ImagePreprocessorService():
     # Process the input command
     def process_command(self, json):
         model = json['model']
-        if json['model'] == 'keras50':
+        if "keras50" in model:
             # preprocessing images for keras50... 
             self.keras50_preprocess(json)
         else:
