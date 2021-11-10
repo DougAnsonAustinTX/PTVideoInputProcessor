@@ -101,8 +101,8 @@ class ImagePreprocessorService():
         array_list =  np.array([img_to_array(img) for img in img_list])
         return {"img":img_list, "array":array_list}
     
-    # Keras50 preprocessing
-    def keras50_preprocess(self, json_obj):
+    # Keras Resnet50 image recognition model - preprocessing
+    def keras_resnet50_preprocess(self, json_obj):
         # Debug
         # logger.info("Keras50 Input: " + json.dumps(json_obj))
         
@@ -163,15 +163,15 @@ class ImagePreprocessorService():
             logger.error(traceback.format_exc())     
         
     # Raw preprocessing
-    def raw_preprocess(self, json):
-        logger.info("Raw Preprocessing: " + json.dumps(json))
+    def raw_preprocess(self, json_obj):
+        logger.info("Raw Preprocessing: " + json.dumps(json_obj))
         
     # Process the input command
     def process_command(self, json):
         model = json['model']
-        if "keras50" in model:
-            # preprocessing images for keras50... 
-            self.keras50_preprocess(json)
+        if "resnet50" in model:
+            # preprocessing images for Keras Resnet50 recognition model... 
+            self.keras_resnet50_preprocess(json)
         else:
             # non-preprocessing - just passing raw input...
             logger.info("WARNING: Model " + model + " has no registered preprocessor function... input files not changed (OK)")
