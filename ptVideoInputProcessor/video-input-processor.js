@@ -665,14 +665,14 @@ VideoInputProcessorPT.prototype.mkS3Dir = async function(dir) {
         // params to write the file to the S3 bucket 
         const params = {
                         'Bucket':pt.config['config']['awsS3Bucket'], 
-                        'Key': dir,
+                        'Key': dir + '/',
                         'ACL': 'public-read',
                         'Body':''
                        };
 
         // write the file to the S3 bucket
         pt.log(LOGGING.INFO,"Creating directory in S3 bucket: " + pt.config['config']['awsS3Bucket'] + " Dir: " + dir);
-        await s3.upload(params, function(err, data) {
+        await s3.putObject(params, function(err, data) {
             if (err) {
                 pt.log(LOGGING.ERROR,"mkS3Dir: ERROR creating Directory: " + dir + " to S3: " + err);
                 return undefined;
