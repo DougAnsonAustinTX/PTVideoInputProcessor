@@ -549,31 +549,152 @@ VideoInputProcessorPT.prototype.sendResponse = async function(result) {
     }
 }
 
-VideoInputProcessorPT.prototype.readFileFromS3Bucket = async function(s3, params) {
-    return new Promise((resolve, reject) => {
-        s3.getObject(params, function (err, s3_data) {
-            if (err) {
-                resolve(err);
-            } else {
-                pt.log(LOGGING.INFO,"readFileFromS3Bucket: Read SUCCESS: File: " + params['Key'] + " Bytes read: " + s3_data['Body'].byteLength);
-                resolve(s3_data);
-            }
-        });
-    });
+VideoInputProcessorPT.prototype.readLocalFile = async function(filename) {
+    try {
+        pt.log(LOGGING.INFO,"readLocalFile: reading in local file: " + filename);
+        const data = await fs.readFileSync(filename, 'utf8')
+        pt.log(LOGGING.INFO,"readLocalFile: File: " + filename + " read in successfully");
+        return data;
+      } 
+      catch (err) {
+          pt.log(LOGGING.ERROR, "readLocalFile: Error reading file: " + filename + " Exception: " + err, err);
+      }
+      return undefined;
 }
 
-VideoInputProcessorPT.prototype.writeToS3Bucket = async function(url,name,data) {
-    // create the output filename
-    const path_elements = url.pathname.split(".");
-    const out_filename = path_elements[0] + "-" + name + "-" + Date.now() + "." + path_elements[1];
-
+VideoInputProcessorPT.prototype.readS3File = async function(s3_url) {
     // We must have previously configured our PT with appropriate config details apriori...
     if (pt.config['config']['auth']['awsAccessKeyId'] !== "" && pt.config['config']['auth']['awsSecretAccessKey'] !== "") {
-        // construct the full filename within the S3 bucket (Video Capture Dir)
-        const filename = pt.config['config']['awsS3VideoCaptureDirectory'] + out_filename;
+        // strip off the s3:// uri...
+        const s3_filename = s3_url.replace('s3://','');
 
-        // add this to the output filenames
-        pt.cacheFilename('s3',filename);
+        // set the region for AWS S3 support
+        AWS.config.update({region: pt.config['config']['awsRegion']});
+
+        // use the AWS S3 API to write the contents of the file to the S3 bucket
+        const s3 = new AWS.S3(
+                    {
+                        accessKeyId: pt.config['config']['auth']['awsAccessKeyId'], 
+                        secretAccessKey: pt.config['config']['auth']['awsSecretAccessKey'], 
+                        Bucket:pt.config['config']['awsS3Bucket']
+                    });
+
+        // params to read file from S3 bucket
+        const params = {
+                        'Bucket':pt.config['config']['awsS3Bucket'], 
+                        'Key': s3_filename
+                       };
+
+        // read in the file from S3
+        pt.log(LOGGING.INFO,"Reading in file from S3 bucket: " + pt.config['config']['awsS3Bucket'] + " S3 filename: " + s3_filename);
+        await s3.getObject(params, function(err, data) {
+            if (err) {
+                pt.log(LOGGING.ERROR,"readS3File: ERROR reading file. S3 Filename: " + s3_filename + " from S3: " + err);
+                return undefined;
+            }
+            else {
+                pt.log(LOGGING.INFO,"readS3File: File read in successfully. S3 filename:" + s3_filename);
+                return data['Body'];
+            }
+        });
+    }
+    else {
+        // no credentials...
+        pt.log(LOGGING.ERROR,"Error creating directory in S3 bucket: credentials not initialized. Dir: " + dir);
+    }
+    return undefined;
+}
+
+VideoInputProcessorPT.prototype.deleteS3File = async function(s3_url) {
+    // We must have previously configured our PT with appropriate config details apriori...
+    if (pt.config['config']['auth']['awsAccessKeyId'] !== "" && pt.config['config']['auth']['awsSecretAccessKey'] !== "") {
+        // strip off the s3:// uri...
+        const s3_filename = s3_url.replace('s3://','');
+
+        // set the region for AWS S3 support
+        AWS.config.update({region: pt.config['config']['awsRegion']});
+
+        // use the AWS S3 API to write the contents of the file to the S3 bucket
+        const s3 = new AWS.S3(
+                    {
+                        accessKeyId: pt.config['config']['auth']['awsAccessKeyId'], 
+                        secretAccessKey: pt.config['config']['auth']['awsSecretAccessKey'], 
+                        Bucket:pt.config['config']['awsS3Bucket']
+                    });
+
+        // params to delete file from S3 bucket
+        const params = {
+                        'Bucket':pt.config['config']['awsS3Bucket'], 
+                        'Key': s3_filename
+                       };
+
+        // delete file from S3
+        pt.log(LOGGING.INFO,"Deleting file from S3 bucket: " + pt.config['config']['awsS3Bucket'] + " S3 filename: " + s3_filename);
+        await s3.deleteObject(params, function(err, data) {
+            if (err) {
+                pt.log(LOGGING.ERROR,"deleteS3File: ERROR deleting file. S3 Filename: " + s3_filename + " from S3: " + err);
+                return undefined;
+            }
+            else {
+                pt.log(LOGGING.INFO,"deleteS3File: File deleted successfully. S3 filename:" + s3_filename);
+                return s3_filename;
+            }
+        });
+    }
+    else {
+        // no credentials...
+        pt.log(LOGGING.ERROR,"Error deleting file in S3 bucket: credentials not initialized. URL: " + s3_url);
+    }
+    return undefined;
+}
+
+VideoInputProcessorPT.prototype.mkS3Dir = async function(dir) {
+    // We must have previously configured our PT with appropriate config details apriori...
+    if (pt.config['config']['auth']['awsAccessKeyId'] !== "" && pt.config['config']['auth']['awsSecretAccessKey'] !== "") {
+        // set the region for AWS S3 support
+        AWS.config.update({region: pt.config['config']['awsRegion']});
+
+        // use the AWS S3 API to write the contents of the file to the S3 bucket
+        const s3 = new AWS.S3(
+                    {
+                        accessKeyId: pt.config['config']['auth']['awsAccessKeyId'], 
+                        secretAccessKey: pt.config['config']['auth']['awsSecretAccessKey'], 
+                        Bucket:pt.config['config']['awsS3Bucket']
+                    });
+
+        // params to write the file to the S3 bucket 
+        const params = {
+                        'Bucket':pt.config['config']['awsS3Bucket'], 
+                        'Key': dir,
+                        'ACL': 'public-read',
+                        'Body':''
+                       };
+
+        // write the file to the S3 bucket
+        pt.log(LOGGING.INFO,"Creating directory in S3 bucket: " + pt.config['config']['awsS3Bucket'] + " Dir: " + dir);
+        await s3.upload(params, function(err, data) {
+            if (err) {
+                pt.log(LOGGING.ERROR,"mkS3Dir: ERROR creating Directory: " + dir + " to S3: " + err);
+                return undefined;
+            }
+            else {
+                pt.log(LOGGING.INFO,"mkS3Dir: Directory created successfully:" + dir);
+                return dir;
+            }
+        });
+    }
+    else {
+        // no credentials...
+        pt.log(LOGGING.ERROR,"Error creating directory in S3 bucket: credentials not initialized. Dir: " + dir);
+    }
+    return undefined;
+}
+
+VideoInputProcessorPT.prototype.writeToS3Bucket = async function(data,dir,filename) {
+    // We must have previously configured our PT with appropriate config details apriori...
+    if (pt.config['config']['auth']['awsAccessKeyId'] !== "" && pt.config['config']['auth']['awsSecretAccessKey'] !== "") {
+        // constuct the fully qualified filename to write
+        filename = dir + "/" + filename;
 
         // set the region for AWS S3 support
         AWS.config.update({region: pt.config['config']['awsRegion']});
@@ -606,6 +727,11 @@ VideoInputProcessorPT.prototype.writeToS3Bucket = async function(url,name,data) 
             }
         });
     }
+    else {
+        // no credentials...
+        pt.log(LOGGING.ERROR,"Error writing file to S3 bucket: credentials not initialized. Filename: " + filename + " Dir: " + dir);
+    }
+    return undefined;
 }
 
 VideoInputProcessorPT.prototype.startCapture = async function(mypt, jsonrpc) {
@@ -929,6 +1055,58 @@ VideoInputProcessorPT.prototype.cleanupFiles = async function(root_dir) {
     return [];
 }
 
+VideoInputProcessorPT.prototype.parseS3OutputFilename = async function(output_tensor) {
+    // break apart the URL
+    const key = 's3://';
+    const base = output_tensor.replace(key,'');
+    const parsed = base.split('/');
+
+    // reconstruct
+    const s3_parsed = {};
+    s3_parsed['filename'] = parsed[2];
+    s3_parsed['s3_root_dir'] = parsed[0];
+    s3_parsed['s3_full_dir'] = parsed[0] + "/" + parsed[1];
+    return s3_parsed;
+}
+
+VideoInputProcessorPT.prototype.preserveFiles = async function(json_obj) {
+    // get key items...
+    const timestamp = json_obj['timestamp'];
+    const root_dir = json_obj['root_dir']; 
+    const doRetain = json_obj['retain'];
+    const files = json_obj['files'];
+    const tensor_file = json_obj['tensor_filename'];
+    const output_tensor = json_obj['output_tensor'];
+
+    // Parse the S3 output tensor filename
+    const s3_parsed = await pt.parseS3OutputFilename(output_tensor);
+    const out_tensorfile = s3_parsed['filename'];
+    const out_s3_root_dir = s3_parsed['s3_root_dir'];
+
+    // make the S3 subdirectory for "timestamp"
+    const base_dir = out_s3_root_dir + "/capture/" + timestamp;
+    const result = await pt.mkS3Dir(base_dir);
+
+    // copy the target files to the base_dir
+    if (result !== undefined) {
+        // upload the original image files
+        for(var i=0;i<files.length;++i) {
+            const local_filename = root_dir + "/" + files[i];
+            await pt.writeToS3Bucket(await pt.readLocalFile(local_filename),base_dir,files[i]);
+        }
+
+        // upload the input_tensor file
+        await pt.writeToS3Bucket(await pt.readLocalFile(tensor_file),base_dir,"input-" + timestamp + ".tensor");
+
+        // upload the output_tensor
+        await pt.writeToS3Bucket(await pt.readS3File(output_tensor),base_dir,"output-" + timestamp + ".tensor");
+    }
+    else {
+        // unable to upload files - directory create has failed
+        pt.log(LOGGING.ERROR,"Unable to preserve files - unable to create S3 directory: " + base_dir);
+    }
+}
+
 VideoInputProcessorPT.prototype.processMQTTCommand = async function(buffer) {
     // messages come in as Buffer type...
     const json_str = buffer.toString('utf8');
@@ -936,45 +1114,53 @@ VideoInputProcessorPT.prototype.processMQTTCommand = async function(buffer) {
     // parse the string
     try {
         // parse the JSON string
-        const json = JSON.parse(json_str);
+        const json_obj = JSON.parse(json_str);
 
         // decode the command and act
-        switch(json['command']) {
+        switch(json_obj['command']) {
             case "clean":
-                // delete temp files 
-                const timestamp = json['timestamp'];
-                const root_dir = json['root_dir']; 
-                const doRetain = json['retain'];
-                const base_dir = json['base_dir'];
-                const tensor_file = json['tensor_filename'];
+                // get key items...
+                const timestamp = json_obj['timestamp'];
+                const root_dir = json_obj['root_dir']; 
+                const doRetain = json_obj['retain'];
+                const tensor_file = json_obj['tensor_filename'];
+                const output_tensor = json_obj['output_tensor'];
 
-                // clean up files
-                if (doRetain == false) { 
-                    // purging raw images...
-                    pt.log(LOGGING.INFO,"Cleaning out captured raw images with timestamp: " + timestamp + " Root dir: " + root_dir);
-                    await pt.cleanupFiles(root_dir);
-                    pt.log(LOGGING.INFO,"Cleaned out captured raw images: " + root_dir + ". OK.");
+                // preserve files if asked
+                if (doRetain == true) {
+                    pt.log(LOGGING.INFO, "Preserving files: " + JSON.stringify(json_obj));
+                    await pt.preserveFiles(json_obj);
+
+                    // clean up the output tensor
+                    pt.log(LOGGING.INFO,"Output tensor now preserved. Deleting original: " + output_tensor);
+                    await pt.deleteS3File(output_tensor);
+
+                    // final log
+                    pt.log(LOGGING.INFO,"Retaining captured images in: " + root_dir + " with timestamp: " + timestamp);
                 }
-                else {
-                    // retaining images....
-                    pt.log(LOGGING.INFO,"Retaining captured images in: " + json['root_dir'] + " with timestamp: " + timestamp);
-                }
+                
+                // purging raw images...
+                pt.log(LOGGING.INFO,"Cleaning out captured raw images with timestamp: " + timestamp + " Root dir: " + root_dir);
+                await pt.cleanupFiles(root_dir);
+                pt.log(LOGGING.INFO,"Cleaned out captured raw images: " + root_dir + ". OK.");
+                
+                // clean up the output tensor
+                // pt.log(LOGGING.INFO,"Output tensor now preserved. Deleting original: " + output_tensor);
+                // await pt.deleteS3File(output_tensor);
 
                 // remove any processed tensor files
-                if (tensor_file !== undefined) {
-                    pt.log(LOGGING.INFO,"Removing Input Tensor File: " + tensor_file);
-                    await fs.rmSync(tensor_file);
-                }
+                pt.log(LOGGING.INFO,"Removing Input Tensor File: " + tensor_file);
+                await fs.rmSync(tensor_file);
                 break;
             default:
                 // ignore unsupported/handled commands
-                pt.log(LOGGING.DEBUG, "Command: " + json['command'] + " ignored (no processor) - OK.");
+                pt.log(LOGGING.DEBUG, "Command: " + json_obj['command'] + " ignored (no processor) - OK.");
                 break;
         }
     }
     catch(ex) {
         // error in processing mqtt command
-        pt.log(LOGGING.ERROR, "Exception in processMQTTCommand: " + exi + ". Ignoring command.", ex);
+        pt.log(LOGGING.ERROR, "Exception in processMQTTCommand: " + ex + ". Ignoring command.", ex);
     }
 }
 
