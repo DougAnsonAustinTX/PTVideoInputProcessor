@@ -552,14 +552,14 @@ VideoInputProcessorPT.prototype.sendResponse = async function(result) {
 VideoInputProcessorPT.prototype.readLocalFile = async function(filename) {
     try {
         pt.log(LOGGING.INFO,"readLocalFile: reading in local file: " + filename);
-        const data = await fs.readFileSync(filename, 'utf8')
+        const data = await fs.readFileSync(filename, 'utf8');
         pt.log(LOGGING.INFO,"readLocalFile: File: " + filename + " read in successfully");
         return data;
       } 
       catch (err) {
           pt.log(LOGGING.ERROR, "readLocalFile: Error reading file: " + filename + " Exception: " + err, err);
       }
-      return undefined;
+      return "error";
 }
 
 VideoInputProcessorPT.prototype.readS3File = async function(s3_url) {
@@ -590,7 +590,7 @@ VideoInputProcessorPT.prototype.readS3File = async function(s3_url) {
         await s3.getObject(params, function(err, data) {
             if (err) {
                 pt.log(LOGGING.ERROR,"readS3File: ERROR reading file. S3 Filename: " + s3_filename + " from S3: " + err);
-                return undefined;
+                return "error";
             }
             else {
                 pt.log(LOGGING.INFO,"readS3File: File read in successfully. S3 filename:" + s3_filename);
@@ -602,7 +602,7 @@ VideoInputProcessorPT.prototype.readS3File = async function(s3_url) {
         // no credentials...
         pt.log(LOGGING.ERROR,"Error creating directory in S3 bucket: credentials not initialized. Dir: " + dir);
     }
-    return undefined;
+    return "error";
 }
 
 VideoInputProcessorPT.prototype.deleteS3File = async function(s3_url) {
@@ -633,7 +633,7 @@ VideoInputProcessorPT.prototype.deleteS3File = async function(s3_url) {
         await s3.deleteObject(params, function(err, data) {
             if (err) {
                 pt.log(LOGGING.ERROR,"deleteS3File: ERROR deleting file. S3 Filename: " + s3_filename + " from S3: " + err);
-                return undefined;
+                return "error";
             }
             else {
                 pt.log(LOGGING.INFO,"deleteS3File: File deleted successfully. S3 filename:" + s3_filename);
@@ -645,7 +645,7 @@ VideoInputProcessorPT.prototype.deleteS3File = async function(s3_url) {
         // no credentials...
         pt.log(LOGGING.ERROR,"Error deleting file in S3 bucket: credentials not initialized. URL: " + s3_url);
     }
-    return undefined;
+    return "error";
 }
 
 VideoInputProcessorPT.prototype.mkS3Dir = async function(dir) {
@@ -675,7 +675,7 @@ VideoInputProcessorPT.prototype.mkS3Dir = async function(dir) {
         await s3.putObject(params, function(err, data) {
             if (err) {
                 pt.log(LOGGING.ERROR,"mkS3Dir: ERROR creating Directory: " + dir + " to S3: " + err);
-                return undefined;
+                return "error";
             }
             else {
                 pt.log(LOGGING.INFO,"mkS3Dir: Directory created successfully:" + dir);
@@ -687,7 +687,7 @@ VideoInputProcessorPT.prototype.mkS3Dir = async function(dir) {
         // no credentials...
         pt.log(LOGGING.ERROR,"Error creating directory in S3 bucket: credentials not initialized. Dir: " + dir);
     }
-    return undefined;
+    return "error";
 }
 
 VideoInputProcessorPT.prototype.writeToS3Bucket = async function(data,dir,filename) {
@@ -719,7 +719,7 @@ VideoInputProcessorPT.prototype.writeToS3Bucket = async function(data,dir,filena
         await s3.upload(params, function(err, data) {
             if (err) {
                 pt.log(LOGGING.ERROR,"writeToS3Bucket: ERROR Uploading " + filename + " to S3: " + err);
-                return undefined;
+                return "error";
             }
             else {
                 pt.log(LOGGING.INFO,`writeToS3Bucket: File uploaded successfully. ${data.Location}`);
@@ -731,7 +731,7 @@ VideoInputProcessorPT.prototype.writeToS3Bucket = async function(data,dir,filena
         // no credentials...
         pt.log(LOGGING.ERROR,"Error writing file to S3 bucket: credentials not initialized. Filename: " + filename + " Dir: " + dir);
     }
-    return undefined;
+    return "error";
 }
 
 VideoInputProcessorPT.prototype.startCapture = async function(mypt, jsonrpc) {
@@ -1055,7 +1055,7 @@ VideoInputProcessorPT.prototype.cleanupFiles = async function(root_dir) {
     return [];
 }
 
-VideoInputProcessorPT.prototype.parseS3OutputFilename = async function(output_tensor) {
+VideoInputProcessorPT.prototype.parseS3OutputFilename = function(output_tensor) {
     // break apart the URL
     const key = 's3://';
     const base = output_tensor.replace(key,'');
@@ -1079,7 +1079,7 @@ VideoInputProcessorPT.prototype.preserveFiles = async function(json_obj) {
     const output_tensor = json_obj['output_tensor'];
 
     // Parse the S3 output tensor filename
-    const s3_parsed = await pt.parseS3OutputFilename(output_tensor);
+    const s3_parsed = pt.parseS3OutputFilename(output_tensor);
     const out_tensorfile = s3_parsed['filename'];
     const out_s3_root_dir = s3_parsed['s3_root_dir'];
 
