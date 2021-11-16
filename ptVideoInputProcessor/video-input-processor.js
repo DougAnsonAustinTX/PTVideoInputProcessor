@@ -367,15 +367,21 @@ VideoInputProcessorPT.prototype.registerVideoInputProcessorProtocolTranslator = 
 };
 
 VideoInputProcessorPT.prototype.publicConfig = function() {
-    // make a copy of the current config...
-    const publicConfig = JSON.parse(JSON.stringify(pt.config));
+    try {
+        // make a copy of the current config...
+        const publicConfig = JSON.parse(JSON.stringify(pt.config));
 
-    // zero out the the auth data...
-    publicConfig['config']['auth'] = {};
-    publicConfig['config']['mqttPassword'] = "";
+        // zero out the the auth data...
+        publicConfig['config']['auth'] = {};
+        publicConfig['config']['mqttPassword'] = "";
 
-    // return a public viewable config
-    return publicConfig;
+        // return a public viewable config
+        return publicConfig;
+    }
+    catch(ex) {
+        pt.log(LOGGING.ERROR, "Unable to display public config: " + ex, ex);
+        return {};
+    }
 }
 
 VideoInputProcessorPT.prototype.createJsonRpcParams = function(ptDeviceName,jsonrpc) {
@@ -563,6 +569,8 @@ VideoInputProcessorPT.prototype.readLocalFile = async function(filename) {
 }
 
 VideoInputProcessorPT.prototype.readS3File = async function(s3_url) {
+    let result = {"Body":Buffer("none")};
+
     // We must have previously configured our PT with appropriate config details apriori...
     if (pt.config['config']['auth']['awsAccessKeyId'] !== "" && pt.config['config']['auth']['awsSecretAccessKey'] !== "") {
         // strip off the s3:// uri...
@@ -587,22 +595,24 @@ VideoInputProcessorPT.prototype.readS3File = async function(s3_url) {
 
         // read in the file from S3
         pt.log(LOGGING.INFO,"Reading in file from S3 bucket: " + pt.config['config']['awsS3Bucket'] + " S3 filename: " + s3_filename);
-        await s3.getObject(params, function(err, data) {
-            if (err) {
-                pt.log(LOGGING.ERROR,"readS3File: ERROR reading file. S3 Filename: " + s3_filename + " from S3: " + err);
-                return "error";
-            }
-            else {
-                pt.log(LOGGING.INFO,"readS3File: File read in successfully. S3 filename:" + s3_filename);
-                return data['Body'];
-            }
+        result = await new Promise((resolve, reject) => {
+            s3.getObject(params, function(err, data) {
+                if (err) {
+                    pt.log(LOGGING.ERROR,"readS3File: ERROR reading file. S3 Filename: " + s3_filename + " from S3: " + err);
+                    reject(err);
+                }
+                else {
+                    pt.log(LOGGING.INFO,"readS3File: File read in successfully. S3 filename:" + s3_filename + " Body length: " + data['Body'].length);
+                    resolve(data);
+                }
+            });
         });
     }
     else {
         // no credentials...
         pt.log(LOGGING.ERROR,"Error creating directory in S3 bucket: credentials not initialized. Dir: " + dir);
     }
-    return "error";
+    return result['Body'];
 }
 
 VideoInputProcessorPT.prototype.deleteS3File = async function(s3_url) {
@@ -630,22 +640,24 @@ VideoInputProcessorPT.prototype.deleteS3File = async function(s3_url) {
 
         // delete file from S3
         pt.log(LOGGING.INFO,"Deleting file from S3 bucket: " + pt.config['config']['awsS3Bucket'] + " S3 filename: " + s3_filename);
-        await s3.deleteObject(params, function(err, data) {
-            if (err) {
-                pt.log(LOGGING.ERROR,"deleteS3File: ERROR deleting file. S3 Filename: " + s3_filename + " from S3: " + err);
-                return "error";
-            }
-            else {
-                pt.log(LOGGING.INFO,"deleteS3File: File deleted successfully. S3 filename:" + s3_filename);
-                return s3_filename;
-            }
+        return await new Promise((resolve, reject) => {
+            s3.deleteObject(params, function(err, data) {
+                if (err) {
+                    pt.log(LOGGING.ERROR,"deleteS3File: ERROR deleting file. S3 Filename: " + s3_filename + " from S3: " + err);
+                    reject(err);
+                }
+                else {
+                    pt.log(LOGGING.INFO,"deleteS3File: File deleted successfully. S3 filename:" + s3_filename);
+                    resolve(s3_filename);
+                }
+            });
         });
     }
     else {
         // no credentials...
         pt.log(LOGGING.ERROR,"Error deleting file in S3 bucket: credentials not initialized. URL: " + s3_url);
+        return "error";
     }
-    return "error";
 }
 
 VideoInputProcessorPT.prototype.mkS3Dir = async function(dir) {
@@ -672,22 +684,24 @@ VideoInputProcessorPT.prototype.mkS3Dir = async function(dir) {
 
         // write the file to the S3 bucket
         pt.log(LOGGING.INFO,"Creating directory in S3 bucket: " + pt.config['config']['awsS3Bucket'] + " Dir: " + dir);
-        await s3.putObject(params, function(err, data) {
-            if (err) {
-                pt.log(LOGGING.ERROR,"mkS3Dir: ERROR creating Directory: " + dir + " to S3: " + err);
-                return "error";
-            }
-            else {
-                pt.log(LOGGING.INFO,"mkS3Dir: Directory created successfully:" + dir);
-                return dir;
-            }
+        return await new Promise((resolve, reject) => {
+            s3.putObject(params, function(err, data) {
+                if (err) {
+                    pt.log(LOGGING.ERROR,"mkS3Dir: ERROR creating Directory: " + dir + " to S3: " + err);
+                    reject(err);
+                }
+                else {
+                    pt.log(LOGGING.INFO,"mkS3Dir: Directory created successfully:" + dir);
+                    resolve(dir);
+                }
+            });
         });
     }
     else {
         // no credentials...
         pt.log(LOGGING.ERROR,"Error creating directory in S3 bucket: credentials not initialized. Dir: " + dir);
+        return "error";
     }
-    return "error";
 }
 
 VideoInputProcessorPT.prototype.writeToS3Bucket = async function(data,dir,filename) {
@@ -716,22 +730,24 @@ VideoInputProcessorPT.prototype.writeToS3Bucket = async function(data,dir,filena
 
         // write the file to the S3 bucket
         pt.log(LOGGING.INFO,"Writing prediction results S3 bucket: " + pt.config['config']['awsS3Bucket'] + " File: " + filename);
-        await s3.upload(params, function(err, data) {
-            if (err) {
-                pt.log(LOGGING.ERROR,"writeToS3Bucket: ERROR Uploading " + filename + " to S3: " + err);
-                return "error";
-            }
-            else {
-                pt.log(LOGGING.INFO,`writeToS3Bucket: File uploaded successfully. ${data.Location}`);
-                return filename;
-            }
+        return await new Promise((resolve, reject) => {
+            s3.upload(params, function(err, data) {
+                if (err) {
+                    pt.log(LOGGING.ERROR,"writeToS3Bucket: ERROR Uploading " + filename + " to S3: " + err);
+                    reject(err);
+                }
+                else {
+                    pt.log(LOGGING.INFO,`writeToS3Bucket: File uploaded successfully. ${data.Location}`);
+                    resolve(filename);
+                }
+            });
         });
     }
     else {
         // no credentials...
         pt.log(LOGGING.ERROR,"Error writing file to S3 bucket: credentials not initialized. Filename: " + filename + " Dir: " + dir);
+        return "error";
     }
-    return "error";
 }
 
 VideoInputProcessorPT.prototype.startCapture = async function(mypt, jsonrpc) {
@@ -1075,11 +1091,11 @@ VideoInputProcessorPT.prototype.preserveFiles = async function(json_obj) {
     const root_dir = json_obj['root_dir']; 
     const doRetain = json_obj['retain'];
     const files = json_obj['files'];
-    const tensor_file = json_obj['tensor_filename'];
-    const output_tensor = json_obj['output_tensor'];
+    const input_tensor_file = json_obj['tensor_filename'];
+    const output_tensor_file = json_obj['output_tensor'];
 
     // Parse the S3 output tensor filename
-    const s3_parsed = pt.parseS3OutputFilename(output_tensor);
+    const s3_parsed = pt.parseS3OutputFilename(output_tensor_file);
     const out_tensorfile = s3_parsed['filename'];
     const out_s3_root_dir = s3_parsed['s3_root_dir'];
 
@@ -1092,14 +1108,18 @@ VideoInputProcessorPT.prototype.preserveFiles = async function(json_obj) {
         // upload the original image files
         for(var i=0;i<files.length;++i) {
             const local_filename = root_dir + "/" + files[i];
-            await pt.writeToS3Bucket(await pt.readLocalFile(local_filename),base_dir,files[i]);
+            const local_file_data = await pt.readLocalFile(local_filename);
+            await pt.writeToS3Bucket(local_file_data,base_dir,files[i]);
         }
 
         // upload the input_tensor file
-        await pt.writeToS3Bucket(await pt.readLocalFile(tensor_file),base_dir,"input-" + timestamp + ".tensor");
+        const input_tensor_data = await pt.readLocalFile(input_tensor_file);
+        await pt.writeToS3Bucket(input_tensor_data,base_dir,"input-" + timestamp + ".tensor");
 
         // upload the output_tensor
-        await pt.writeToS3Bucket(await pt.readS3File(output_tensor),base_dir,"output-" + timestamp + ".tensor");
+        const output_tensor_data = await pt.readS3File(output_tensor_file);
+        pt.log(LOGGING.INFO,"Writing out File: " + output_tensor_file + " to S3. Data Length: " + JSON.stringify(output_tensor_data.length));
+        await pt.writeToS3Bucket(output_tensor_data,base_dir,"output-" + timestamp + ".tensor");
     }
     else {
         // unable to upload files - directory create has failed
