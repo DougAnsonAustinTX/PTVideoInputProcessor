@@ -68,7 +68,7 @@ const VIDEO_INPUT_PROCESSOR_API_CONFIG_RESOURCE_ID = 5702;
 const DEFAULT_JSON_RPC_COMMAND = {};
 
 // Video Input Processor Defaults
-const DEFAULT_MODEL_TYPE                = "keras-resnet50-image-recognizer";        // default image preprocessor supports keras50 models
+const DEFAULT_MODEL_TYPE                = "my_model";                               // default image preprocessor supports keras50 models
 const DEFAULT_CAPTURE_FPS               = 5000;                                     // frame captures from video input per second (in ms)
 const DEFAULT_CAPTURES_PER_PREDICTION   = 5;                                        // number of frames to capture for invoking a prediction
 const DEFAULT_MODEL_IMAGE_SHAPE         = {"width":224, "height":224, "depth":3};   // default shape for captured images
