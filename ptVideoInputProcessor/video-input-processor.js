@@ -472,9 +472,9 @@ VideoInputProcessorPT.prototype.validatedParams = function(method,params) {
         if (SUPPORTED_COMMANDS[method] !== undefined) {
             if (params !== undefined && JSON.stringify(params) !== '[]' ) {
                 const param_json = SUPPORTED_COMMANDS[method];
-                if (param_json !== undefined && JSON.stringify(param_json) !== '{}') {
+                if (param_json !== undefined && JSON.stringify(param_json) !== '{}' && JSON.stringify(param_json) !== '[]') {
                     const param_list = param_json['params'];
-                    if (param_list !== undefined && JSON.stringify(param_list) != '[]') {
+                    if (param_list !== undefined && JSON.stringify(param_list) != '[]' && JSON.stringify(param_json) !== '{}') {
                         // find key matches for each required parameter. Extraneous params will be ignored. 
                         for (var i = 0; i < param_list.length; i++) {
                             if (params[param_list[i]] === undefined) {
