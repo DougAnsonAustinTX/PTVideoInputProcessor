@@ -56,7 +56,7 @@ const S3_CAPTURE_RELATIVE_DIR = "video/capture";
 const AWS_REGION = "us-east-1";        
 
 // Video Input Processor API Object ID
-const VIDEO_INPUT_PROCESSOR_RPC_API_OBJECT_ID = 33312;
+const VIDEO_INPUT_PROCESSOR_RPC_API_OBJECT_ID = 33311;
 
 // Video Input Processor API Command Resource ID
 const VIDEO_INPUT_PROCESSOR_API_COMMAND_RESOURCE_ID = 5701;
