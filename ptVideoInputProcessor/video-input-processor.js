@@ -509,7 +509,7 @@ VideoInputProcessorPT.prototype.validatedParams = function(method,params) {
 VideoInputProcessorPT.prototype.isSupportedMethod = function(method,params) {
     if (method !== undefined) {
         if (SUPPORTED_COMMANDS[method] !== undefined) {
-            if (params !== undefined && JSON.stringify(params) !== '[]' ) {
+            if (params !== undefined && JSON.stringify(params) !== '[]' && JSON.stringify(params) !== '{}') {
                 return pt.validatedParams(method,params);
             }
             pt.log(LOGGING.DEBUG,"Supported Method: " + method + " (no params)")
