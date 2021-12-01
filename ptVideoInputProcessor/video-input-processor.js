@@ -373,7 +373,9 @@ VideoInputProcessorPT.prototype.publicConfig = function() {
 
         // zero out the the auth data...
         publicConfig['config']['auth'] = {};
+        publicConfig['config']['mqttUsername'] = "";
         publicConfig['config']['mqttPassword'] = "";
+        publicConfig['config']['mqttClientId'] = "";
 
         // return a public viewable config
         return publicConfig;
@@ -558,7 +560,7 @@ VideoInputProcessorPT.prototype.sendResponse = async function(result) {
 VideoInputProcessorPT.prototype.readLocalFile = async function(filename) {
     try {
         pt.log(LOGGING.INFO,"readLocalFile: reading in local file: " + filename);
-        const data = await fs.readFileSync(filename, 'utf8');
+        const data = await fs.readFileSync(filename);
         pt.log(LOGGING.INFO,"readLocalFile: File: " + filename + " read in successfully");
         return data;
       } 
@@ -1022,17 +1024,18 @@ VideoInputProcessorPT.prototype.dispatchAndPredict = async function(mypt, json) 
         if (mypt.mqttClient !== undefined && mypt.mqttConnected == true) {
             // create the publish shape in NCHW format
             const publish_shape = [];
+            const config_shape = JSON.parse(mypt.config['config']['shape']);
             publish_shape.push(json['files'].length);
-            publish_shape.push(this.config['config']['shape']['depth']);
-            publish_shape.push(this.config['config']['shape']['height']);
-            publish_shape.push(this.config['config']['shape']['width']);
+            publish_shape.push(config_shape['depth']);
+            publish_shape.push(config_shape['width']);
+            publish_shape.push(config_shape['height']);
 
             // prepare the publish payload
             const publish_data = {};
             publish_data['timestamp'] = json['timestamp'];
             publish_data['files'] = json['files'];
             publish_data['shape'] = publish_shape;
-            publish_data['model'] = this.config['config']['model'];
+            publish_data['model'] = mypt.config['config']['model'];
             publish_data['retain'] = json['retain'];
             publish_data['root_dir'] = json['root_dir'];
             publish_data['base_dir'] = json['base_dir'];
@@ -1108,7 +1111,9 @@ VideoInputProcessorPT.prototype.preserveFiles = async function(json_obj) {
         // upload the original image files
         for(var i=0;i<files.length;++i) {
             const local_filename = root_dir + "/" + files[i];
+            pt.log(LOGGING.INFO,"Reading In Local File: " + local_filename);
             const local_file_data = await pt.readLocalFile(local_filename);
+            pt.log(LOGGING.INFO,"Writing data to S3 file in bucket: " + this.config['config']['awsS3Bucket'] + " Root Dir: " + base_dir + " File(" + i + "): " + files[i]);
             await pt.writeToS3Bucket(local_file_data,base_dir,files[i]);
         }
 

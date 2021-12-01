@@ -115,6 +115,7 @@ class ImagePreprocessorService():
                 file_list.append(json_obj['root_dir'] + '/' + files[i])
         
             # LoadImages
+            print("Loading Image with shape: " + str(shape));
             loaded_images = self.read_image_batch(file_list,shape[2],shape[3])
             
             # Preprocess images for Keras50...
@@ -156,7 +157,7 @@ class ImagePreprocessorService():
             cmd['num_images'] = len(preprocessed_images_list)
             
             # Publish to MQTT
-            logger.info("Publishing for prediction(): " + json.dumps(cmd) + " Topic: " + COMMAND_TOPIC + " TensorFile: " + input_data_filename)
+            logger.info("Publishing for prediction(): " + json.dumps(cmd) + " Topic: " + COMMAND_TOPIC)
             self.client.publish(COMMAND_TOPIC,json.dumps(cmd))
         except Exception as e:
             logger.error("Caught Exception in keras50_preprocess(): " + str(e))
