@@ -51,8 +51,7 @@ const VERSION = "1.0.0";
 
 // CONFIG
 
-// S3 Relative capture directory
-const S3_CAPTURE_RELATIVE_DIR = "video/capture";
+// S3 Region
 const AWS_REGION = "us-east-1";        
 
 // Video Input Processor API Object ID
@@ -132,7 +131,7 @@ function sleep(ms) {
     });
 }
 
-function VideoInputProcessorPT(LOG_LEVEL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET, AWS_S3_VIDEO_CAPTURE_DIR, AWS_REGION, PT_DEVICE_NAME) {
+function VideoInputProcessorPT(LOG_LEVEL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET, AWS_REGION, PT_DEVICE_NAME) {
     try {
         this.name = 'video-input-processor';
         this.log_level = LOG_LEVEL;
@@ -155,7 +154,6 @@ function VideoInputProcessorPT(LOG_LEVEL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_K
         this.config['config']['auth']['awsAccessKeyId'] = AWS_ACCESS_KEY_ID;
         this.config['config']['auth']['awsSecretAccessKey'] = AWS_SECRET_ACCESS_KEY;
         this.config['config']['awsS3Bucket'] = AWS_S3_BUCKET;
-        this.config['config']['awsS3VideoCaptureDirectory'] = AWS_S3_VIDEO_CAPTURE_DIR;
         this.config['config']['awsRegion'] = AWS_REGION;
         this.config['config']['commands'] = SUPPORTED_COMMANDS;
 
@@ -1092,18 +1090,16 @@ VideoInputProcessorPT.prototype.preserveFiles = async function(json_obj) {
     // get key items...
     const timestamp = json_obj['timestamp'];
     const root_dir = json_obj['root_dir']; 
-    const doRetain = json_obj['retain'];
     const files = json_obj['files'];
     const input_tensor_file = json_obj['tensor_filename'];
     const output_tensor_file = json_obj['output_tensor'];
 
     // Parse the S3 output tensor filename
     const s3_parsed = pt.parseS3OutputFilename(output_tensor_file);
-    const out_tensorfile = s3_parsed['filename'];
     const out_s3_root_dir = s3_parsed['s3_root_dir'];
 
     // make the S3 subdirectory for "timestamp"
-    const base_dir = out_s3_root_dir + "/capture/" + timestamp;
+    const base_dir = out_s3_root_dir + "/" + this.config['config']['notebookCaptureRoot'] + "/" + timestamp;
     const result = await pt.mkS3Dir(base_dir);
 
     // copy the target files to the base_dir
@@ -1237,7 +1233,6 @@ VideoInputProcessorPT.prototype.connectToMQTTBroker = async function(mypt) {
                                        process.env.SAPT_AWS_ACCESS_KEY_ID,
                                        process.env.SAPT_AWS_SECRET_ACCESS_KEY,
                                        process.env.SAPT_AWS_S3_BUCKET,
-                                       process.env.SAPT_AWS_S3_VIDEO_CAPTURE_DIR,
                                        process.env.SAPT_AWS_REGION,
                                        process.env.SAPT_PT_DEVICE_NAME);
 
